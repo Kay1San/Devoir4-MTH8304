@@ -132,12 +132,11 @@ k_lists <- c(20, 40, 60, 80)
 num_k <- 4
 
 #Reprensetation de Fashin-MNIST par des images (comme dev 3)
-par(mfrow <- c(2, 2))
+par(mfrow = c(2, 2))
 numImages <- 4
 for(j in 1:numImages){
-  dig <- (matrix(mnist.train$x[j,],28,28))[,28:1]
-  image(dig, col=brewer.pal(9,"Greys"))
-  title(main = paste0("Image d'indice", " ", j))
+  dig <- matrix(mnist.train$x[j,], 28, 28)[, 28:1]
+  image(dig, col=brewer.pal(9, "Greys"), main=paste0("Image d'indice ", j))
 }
 
 #Representation de Fashion-MNIST en utilisant code du debut
