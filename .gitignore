@@ -1,0 +1,6 @@
+*.jpg
+Fashion-MNIST/
+images_jpeg/
+*.png
+*.RData
+*.Rhistory
