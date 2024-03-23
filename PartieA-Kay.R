@@ -126,14 +126,15 @@ mean(pred.fk$predictions != fea.valid.k$lab)
 
 coord.xy <- (data.frame(x = c(img.y[,28:1]), y = c(img.x[,28:1]))-1)/27
 lambdas <- c(2,4,10,20,50)
-num_lambdas <- 5
 
+numImages <- 9
+num_lambdas <- 5
 k_lists <- c(20, 40, 60, 80)
 num_k <- 4
 
 #Reprensetation de Fashin-MNIST par des images (comme dev 3)
-par(mfrow = c(2, 2))
-numImages <- 4
+par(mfrow = c(3, 3))
+
 for(j in 1:numImages){
   dig <- matrix(mnist.train$x[j,], 28, 28)[, 28:1]
   image(dig, col=brewer.pal(9, "Greys"), main=paste0("Image d'indice ", j))
@@ -148,35 +149,56 @@ for(i in 1:numImages){
   p[[i]] <- ggplot(data = dig.xy.i, mapping = aes(x = x, y = y, col = orig)) + geom_point(size=1)+
     scale_colour_gradientn(colors=brewer.pal(n =9, name = "YlGnBu"), name = "") +
     coord_fixed() + xlab("") + ylab("")
-  
-  for(j in 1:num_lambdas){
-    lambda <- lambdas[j]
-    print(paste("##### lambda =", lambda))
-    train.loc <- cbind(t(df.train[,-785]), lambda * coord.xy)
-    hclust.train <- agnes(train.loc)
-    
-    for(z in 1:num_k){
-      k <- k_lists[z]
-      print(paste("## k =", k))
-      clust.k <- cutree(hclust.train, k)
-      
-      ## transformation en variables catégoriques
-      clust.k.group <- factor(clust.k, levels=1:k)
-      
-      ## graphique du clustering
-      testP <- ggplot(data = data.frame(coord.xy, class=clust.k.group), mapping = aes(x = x, y = y, col = class)) +
-        geom_point(size=5) + 
-        scale_colour_manual(values = rep(brewer.pal(n =10, name = "Paired"), ceiling(k/10)), guide = "none") + 
-        coord_fixed() + 
-        xlab("") + ylab("") + 
-        ggtitle(paste("Image", i, "- Lambda", lambda, "- k", k))
-      
-      file_name <- paste("plot_image", i, "lambda", lambda, "k", k, ".png", sep = "_")
-      ggsave(file_name, plot = testP, path = getwd(), width = 6, height = 4)
-    }
-    
-  }
 }
 do.call(grid.arrange,p)
+ 
+
+for(j in 1:num_lambdas){
+  lambda <- lambdas[j]
+  print(paste("##### lambda =", lambda))
+  train.loc <- cbind(t(df.train[,-785]), lambda * coord.xy)
+  hclust.train <- agnes(train.loc)
+
+  for(z in 1:num_k){
+     k <- k_lists[z]
+     print(paste("## k =", k))
+     clust.k <- cutree(hclust.train, k)
+
+     ## transformation en variables catégoriques
+     clust.k.group <- factor(clust.k, levels=1:k)
+
+     ## graphique du clustering
+     testP <- ggplot(data = data.frame(coord.xy, class=clust.k.group), mapping = aes(x = x, y = y, col = class)) +
+       geom_point(size=5) +
+       scale_colour_manual(values = rep(brewer.pal(n =10, name = "Paired"), ceiling(k/10)), guide = "none") +
+       coord_fixed() +
+       xlab("") + ylab("") +
+       ggtitle(paste("Image", i, "- Lambda", lambda, "- k", k))
+
+     file_name <- paste("plot_image", i, "lambda", lambda, "k", k, ".png", sep = "_")
+     ggsave(file_name, plot = testP, path = getwd())
+     
+     
+     ## calcul des intensités moyennes par cluster
+     dig.i.clust.k <- aggregate(dig.i,by = list(clust.k.group), FUN = "mean")
+     ## attribution de l’intensité moyenne du cluster à chaque pixel du cluster
+     dig.i.clust.k.merge <- data.frame(cluster = clust.k.group, val = rep(NA, 784))
+     for (j in 1:k)
+       dig.i.clust.k.merge$val[dig.i.clust.k.merge$cluster == j] <- dig.i.clust.k[j,2]
+     dig.xy.i <- data.frame(coord.xy, orig = dig.i, clust = dig.i.clust.k.merge[,2])
+     ## graphiques des intensités moyennes pour l’image i
+     plot.int <- ggplot(data = dig.xy.i, mapping = aes(x = x, y = y, col = clust)) + geom_point(size=5)+
+       scale_colour_gradientn(colors=brewer.pal(n =9, name = "YlGnBu"), name = "", lim = c(0,1)) +
+       coord_fixed()+ xlab("") + ylab("") +
+       ggtitle(paste("Lambda", lambda, "- k", k))
+     
+     int_name <- paste("intensity_", i, "lambda", lambda, "k", k, ".png", sep = "_")
+     ggsave(int_name, plot = plot.int, path = getwd())
+     
+     
+ }
+ 
+}
+
 
 
