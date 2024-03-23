@@ -153,6 +153,8 @@ for(i in 1:numImages){
 do.call(grid.arrange,p)
  
 
+error_data <- data.frame(lambda = numeric(), k = numeric(), error.val = numeric())
+
 for(j in 1:num_lambdas){
   lambda <- lambdas[j]
   print(paste("##### lambda =", lambda))
@@ -196,9 +198,79 @@ for(j in 1:num_lambdas){
      ggsave(int_name, plot = plot.int, path = getwd())
      
      
+     ## Création de l’ensemble de validation ayant 5000 exemples
+     df.valid <- data.frame(x = mnist.train$x[5001:10000,]/255,
+                            lab = factor(fashion.lab[mnist.train.lab[5001:10000]+1], levels = fashion.lab))
+     
+     ## Entraînement du classifieur sur les données originales:
+     ## le nombre de clusters = 784
+     f0 <- ranger(lab~., data = df.train)
+     pred.f0 <- predict(f0, data = df.valid) ## estimation en validation
+     
+     ## Erreur de classification totale sur l’ensemble de validation
+     mean(pred.f0$predictions != df.valid$lab)
+     
+     ## Entraînement sur les caractéristiques automatiques
+     ## Le clustering est utilisé pour calculer les intensités moyennes par cluster
+     ## sur l’ensemble d’entraînement:
+     trainclust.k <- aggregate(t(df.train[,-785]), by = list(clust.k.group), FUN = "mean")
+     fea.train.k <- data.frame(x = t(trainclust.k[,-1]), lab = df.train$lab)
+     
+     ## Sur l’ensemble de validation:
+     validclust.k <- aggregate(t(df.valid[,-785]), by = list(clust.k.group), FUN = "mean")
+     fea.valid.k <- data.frame(x = t(validclust.k[,-1]), lab = df.valid$lab)
+     
+     ## Entraînement du classifieur:
+     fk <- ranger(lab~., data = fea.train.k)
+     
+     pred.fk <- predict(fk, data = fea.valid.k) ## estimation en validation
+     
+     ## Erreur de classification totale sur l’ensemble de validation
+     val.error <- mean(pred.fk$predictions != fea.valid.k$lab)
+     
+     print(mean(pred.fk$predictions != fea.valid.k$lab))
+     
+     error_data <- rbind(error_data, data.frame(lambda = lambda, k = k, error.val = val.error))
+     
+     
+     
  }
- 
+  
 }
+myP <- ggplot(error_data, aes(x = lambda, y = error.val, group = k, color = as.factor(k))) +
+  geom_line() +
+  geom_point() +
+  theme_minimal() +
+  labs(x = "Lambda", y = "Validation Error", color = "k", title = "Erreur de validation avec k et lambda")
+
+
+
+#### element 3 ######
+
+iris.1 <- iris[1:74, ]
+iris.2 <- iris[75:150, ]
+
+library(tree)
+
+t.iris1 <- tree(Species ~ Petal.Length + Petal.Width, iris.1)
+summary(t.iris1)
+plot(t.iris1, lwd = 2)
+text(t.iris1, cex = 1)
+
+plot(iris.1$Petal.Length, iris.1$Petal.Width, xlab="Petal.Length", ylab="Petal.Width", col=ifelse(iris.1$Petal.Length<2.6, "red", "blue"))
+abline(v = 2.6, col = "black", lty = 2)
+
+
+t.iris2 <- tree(Species ~ Petal.Length + Petal.Width, iris.2)
+summary(t.iris2)
+plot(t.iris2, lwd = 2)
+text(t.iris2, cex = 1)
+
+
+plot(iris.2$Petal.Length, iris.2$Petal.Width, xlab="Petal.Length", ylab="Petal.Width", col=ifelse(iris.2$Petal.Length<4.9, "blue", "green"))
+abline(h = 1.75, col = "black", lty = 2)
+lines(c(4.9,4.9), c(0,1.75), col="black", lty=2)
+lines(c(0,4.9), c(1.45, 1.45), col="black", lty=2)
 
 
 
