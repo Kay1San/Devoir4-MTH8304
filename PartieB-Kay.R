@@ -54,7 +54,7 @@ ggplot(data = img1, aes(x = x, y = y)) + geom_point(colour = rgb(img1[c("R", "G"
   plotTheme()+ coord_fixed()
 
 library(mclust)
-img.mclust <- Mclust(img1)
+img.mclust <- Mclust(img1) #img.mclust$BIC pour top 3 modeldes
 
 plot(img.mclust, what = "BIC")
 
@@ -76,7 +76,7 @@ ggplot(data = img1, aes(x = x, y = y)) +
 #VVV,4 et VEV,4
 
 
-img2.mclust <- Mclust(img1, modelName="VVV", G=4)
+img2.mclust <- Mclust(img1, modelName="VVV", G=9)
 plot(img2.mclust, what = "BIC")
 
 i <- 1
@@ -125,3 +125,60 @@ ggplot(data = img1, aes(x = x, y = y)) +
   geom_point(colour = col.clust[img4.mclust$classif]) +
   labs(title = "Segmented Image 4") +
   xlab("") + ylab("") + plotTheme()+ coord_fixed()
+
+
+##### Element 3 ######
+
+data(faithful)
+set.seed(1989922)
+N<-5
+indices <- sample(nrow(faithful), N)
+faithful.data<- faithful[indices, ]
+
+faithful.df <- data.frame(
+  x = c(4.117, 3.750, 4.533, 4.033, 4.233),
+  y = c(79, 75, 84, 80, 81),
+  index = c(226, 98, 262, 34, 141),
+  color = c("blue", "black", "black", "blue", "black")
+)
+
+hc.single <- hclust(dist(faithful.data), method = "single")
+plot(hc.single, main = " Dendrogramme du clustering hiérarchique avec liaison simple ",
+      xlab = "", sub = "", cex = .9)
+
+plot(faithful.df$x, faithful.df$y, pch=19, cex=1.5, col=faithful.df$color)
+text(faithful.df$x, faithful.df$y, labels=faithful.df$index, pos=3, cex=0.8, col=faithful.df$color)
+
+
+faithful.df <- data.frame(
+  x = c(4.117, 3.750, 4.533, 4.033, 4.233),
+  y = c(79, 75, 84, 80, 81),
+  index = c(226, 98, 262, 34, 141),
+  color = c("blue", "black", "black", "blue", "blue")
+)
+plot(faithful.df$x, faithful.df$y, pch=19, cex=1.5, col=faithful.df$color)
+text(faithful.df$x, faithful.df$y, labels=faithful.df$index, pos=3, cex=0.8, col=faithful.df$color)
+
+faithful.df <- data.frame(
+  x = c(4.117, 3.750, 4.533, 4.033, 4.233),
+  y = c(79, 75, 84, 80, 81),
+  index = c(226, 98, 262, 34, 141),
+  color = c("blue", "black", "blue", "blue", "blue")
+)
+plot(faithful.df$x, faithful.df$y, pch=19, cex=1.5, col=faithful.df$color)
+text(faithful.df$x, faithful.df$y, labels=faithful.df$index, pos=3, cex=0.8, col=faithful.df$color)
+
+
+faithful.df <- data.frame(
+  x = c(4.117, 3.750, 4.533, 4.033, 4.233),
+  y = c(79, 75, 84, 80, 81),
+  index = c(226, 98, 262, 34, 141),
+  color = c("blue", "blue", "blue", "blue", "blue")
+)
+plot(faithful.df$x, faithful.df$y, pch=19, cex=1.5, col=faithful.df$color)
+text(faithful.df$x, faithful.df$y, labels=faithful.df$index, pos=3, cex=0.8, col=faithful.df$color)
+
+
+
+
+

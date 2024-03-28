@@ -53,9 +53,11 @@ coord.xy <- (data.frame(x = c(img.y[,28:1]), y = c(img.x[,28:1]))-1)/27
 i <- 1
 dig.i <- unlist(df.train[i,-785])
 dig.xy.i <- data.frame(coord.xy, orig = dig.i)
-ggplot(data = dig.xy.i, mapping = aes(x = x, y = y, col = orig)) + geom_point(size=1)+
+ggplot(data = dig.xy.i, mapping = aes(x = x, y = y, col = orig)) + geom_point(size=2)+
   scale_colour_gradientn(colors=brewer.pal(n =9, name = "YlGnBu"), name = "") +
-  coord_fixed() + xlab("") + ylab("")
+  coord_fixed() + xlab("") + ylab("") + theme_void() + ggtitle("Image Originale")
+
+
 
 
 lambda <- 10
@@ -88,7 +90,7 @@ dig.xy.i <- data.frame(coord.xy, orig = dig.i, clust = dig.i.clust.k.merge[,2])
 ## graphiques des intensités moyennes pour l’image i
 ggplot(data = dig.xy.i, mapping = aes(x = x, y = y, col = clust)) + geom_point(size=5)+
   scale_colour_gradientn(colors=brewer.pal(n =9, name = "YlGnBu"), name = "", lim = c(0,1)) +
-  coord_fixed()+ xlab("") + ylab("")
+  coord_fixed()+ xlab("") + ylab("") 
 
 
 ## Création de l’ensemble de validation ayant 5000 exemples
@@ -125,12 +127,15 @@ mean(pred.fk$predictions != fea.valid.k$lab)
 ############################ EVALUATION 1 ######################################
 
 coord.xy <- (data.frame(x = c(img.y[,28:1]), y = c(img.x[,28:1]))-1)/27
-lambdas <- c(2,4,10,20,50)
+lambdas <- c(20,50,100,150,300)
 
 numImages <- 9
-num_lambdas <- 5
-k_lists <- c(20, 40, 60, 80)
-num_k <- 4
+num_lambdas <- 1
+k_lists <- c(80,160,320,700)
+num_k <- 1
+
+#k_lists <- c(320,500,700)
+#num_k <- 3
 
 #Reprensetation de Fashin-MNIST par des images (comme dev 3)
 par(mfrow = c(3, 3))
@@ -142,18 +147,24 @@ for(j in 1:numImages){
 
 #Representation de Fashion-MNIST en utilisant code du debut
 p <- list()
-for(i in 1:numImages){
+for(i in 1:6){
   print(paste("########### image =", i))
   dig.i <- unlist(df.train[i,-785])
   dig.xy.i <- data.frame(coord.xy, orig = dig.i)
   p[[i]] <- ggplot(data = dig.xy.i, mapping = aes(x = x, y = y, col = orig)) + geom_point(size=1)+
     scale_colour_gradientn(colors=brewer.pal(n =9, name = "YlGnBu"), name = "") +
-    coord_fixed() + xlab("") + ylab("")
+    coord_fixed() + xlab("") + ylab("")+ggtitle(paste("Image d'indice ", i)) +
+    theme_void()
 }
 do.call(grid.arrange,p)
+
+
  
 
 error_data <- data.frame(lambda = numeric(), k = numeric(), error.val = numeric())
+
+ex_data <- data.frame(lambda = numeric(), k = numeric(), ex.val = numeric())
+
 
 for(j in 1:num_lambdas){
   lambda <- lambdas[j]
@@ -165,7 +176,7 @@ for(j in 1:num_lambdas){
      k <- k_lists[z]
      print(paste("## k =", k))
      clust.k <- cutree(hclust.train, k)
-
+     
      ## transformation en variables catégoriques
      clust.k.group <- factor(clust.k, levels=1:k)
 
@@ -208,36 +219,37 @@ for(j in 1:num_lambdas){
      pred.f0 <- predict(f0, data = df.valid) ## estimation en validation
      
      ## Erreur de classification totale sur l’ensemble de validation
-     mean(pred.f0$predictions != df.valid$lab)
+     val.ex <- mean(pred.f0$pred != df.valid$lab)
      
      ## Entraînement sur les caractéristiques automatiques
      ## Le clustering est utilisé pour calculer les intensités moyennes par cluster
      ## sur l’ensemble d’entraînement:
      trainclust.k <- aggregate(t(df.train[,-785]), by = list(clust.k.group), FUN = "mean")
-     fea.train.k <- data.frame(x = t(trainclust.k[,-1]), lab = df.train$lab)
+     fea.train.k <- data.frame(x = t(trainclust.k[,-1]), y = df.train$lab)
      
      ## Sur l’ensemble de validation:
      validclust.k <- aggregate(t(df.valid[,-785]), by = list(clust.k.group), FUN = "mean")
-     fea.valid.k <- data.frame(x = t(validclust.k[,-1]), lab = df.valid$lab)
+     fea.valid.k <- data.frame(x = t(validclust.k[,-1]), y = df.valid$lab)
      
      ## Entraînement du classifieur:
-     fk <- ranger(lab~., data = fea.train.k)
+     fk <- ranger(y~., data = fea.train.k)
      
      pred.fk <- predict(fk, data = fea.valid.k) ## estimation en validation
      
      ## Erreur de classification totale sur l’ensemble de validation
-     val.error <- mean(pred.fk$predictions != fea.valid.k$lab)
+     val.error <- mean(pred.fk$pred != fea.valid.k$y)
      
-     print(mean(pred.fk$predictions != fea.valid.k$lab))
+     print(mean(pred.fk$pred!= fea.valid.k$y))
      
      error_data <- rbind(error_data, data.frame(lambda = lambda, k = k, error.val = val.error))
+     ex_data <- rbind(ex_data, data.frame(lambda = lambda, k = k, ex.val = val.ex))
      
      
      
  }
   
 }
-myP <- ggplot(error_data, aes(x = lambda, y = error.val, group = k, color = as.factor(k))) +
+myP <- ggplot(ex_data, aes(x = lambda, y = ex.val, group = k, color = as.factor(k))) +
   geom_line() +
   geom_point() +
   theme_minimal() +
@@ -247,18 +259,26 @@ myP <- ggplot(error_data, aes(x = lambda, y = error.val, group = k, color = as.f
 
 #### element 3 ######
 
-iris.1 <- iris[1:74, ]
-iris.2 <- iris[75:150, ]
-
 library(tree)
+set.seed(1989922)
+
+shuffle_iris <- iris[sample(1:nrow(iris)), ] 
+  
+iris.1 <- shuffle_iris[1:74, ]
+iris.2 <- shuffle_iris[75:150, ]
 
 t.iris1 <- tree(Species ~ Petal.Length + Petal.Width, iris.1)
 summary(t.iris1)
 plot(t.iris1, lwd = 2)
 text(t.iris1, cex = 1)
 
-plot(iris.1$Petal.Length, iris.1$Petal.Width, xlab="Petal.Length", ylab="Petal.Width", col=ifelse(iris.1$Petal.Length<2.6, "red", "blue"))
-abline(v = 2.6, col = "black", lty = 2)
+plot(iris.1$Petal.Length, iris.1$Petal.Width, xlab="Petal.Length", ylab="Petal.Width", pch=16, col = ifelse(iris.1$Petal.Length<2.35,"red", ifelse(iris.1$Petal.Length<4.95, "blue", "green")))
+abline(v = 2.35, col = "black", lty = 2)
+abline(v = 4.95, col = "black", lty = 2)
+lines(c(2.35,4.95), c(1.45, 1.45), col="black", lty=2)
+legend("topleft",legend=c("Setosa", "Versicolor", "Virginica"), fill=c("Red", "Blue", "Green"))
+title("Partitions obtenues pour la première sous-ensemble des données iris")
+
 
 
 t.iris2 <- tree(Species ~ Petal.Length + Petal.Width, iris.2)
@@ -267,10 +287,15 @@ plot(t.iris2, lwd = 2)
 text(t.iris2, cex = 1)
 
 
-plot(iris.2$Petal.Length, iris.2$Petal.Width, xlab="Petal.Length", ylab="Petal.Width", col=ifelse(iris.2$Petal.Length<4.9, "blue", "green"))
-abline(h = 1.75, col = "black", lty = 2)
-lines(c(4.9,4.9), c(0,1.75), col="black", lty=2)
-lines(c(0,4.9), c(1.45, 1.45), col="black", lty=2)
+plot(iris.2$Petal.Length, iris.2$Petal.Width, xlab="Petal.Length", ylab="Petal.Width", pch=16, col = ifelse(iris.2$Petal.Length < 2.6, "red", 
+                                                                                                            ifelse(iris.2$Petal.Width < 1.75, "blue","green"))) 
+                                                                                                                  
+abline(v = 2.6, col = "black", lty = 2)
+lines(c(2.6,8),c(1.75,1.75),col="black",lty=2)
+lines(c(4.5,4.5), c(0,1.75), col="black", lty=2)
+lines(c(5.05,5.05), c(1.75,6), col="black", lty=2)
+legend("topleft",legend=c("Setosa", "Versicolor", "Virginica"), fill=c("Red", "Blue", "Green"))
+title("Partitions obtenues pour la deuxième sous-ensemble des données iris")
 
 
 
